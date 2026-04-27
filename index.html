@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campo Minado HTML/CSS - Responsivo</title>
+    <style>
+        :root {
+            --grid-gap: 8px;
+            --background-color: #702a2a;
+            --cell-color-initial: #000000;   
+            --cell-color-named-html: #16bd10; /* Laranja HTML */
+            --cell-color-named-css: #1572b6;  /* Azul CSS */
+            --cell-color-revealed: #24c015; 
+            --text-color-light: #ffffff;
+            --text-color-dark: #000000;
+            --border-color: #ceb12f;
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        h1 {
+            color: #ff719c;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .grid-container {
+            display: grid;
+            width: 100%;
+            max-width: 1400px;
+            /* Layout 10x10 responsivo */
+            grid-template-columns: repeat(10, 1fr);
+            gap: var(--grid-gap);
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1; 
+            width: 100%;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: bold;
+            padding: 5px;
+            box-sizing: border-box;
+            transition: transform 0.3s ease, background-color 0.3s, color 0.3s;
+            user-select: none;
+            background-color: var(--cell-color-initial);
+            color: var(--text-color-light);
+            /* Fonte responsiva para o número inicial */
+            font-size: clamp(16px, 4vw, 32px);
+        }
+
+        .cell:not(.revealed):hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        /* Estado 2: Nome da tag/propriedade revelado */
+        .cell.named.type-html {
+            background-color: var(--cell-color-named-html);
+        }
+        
+        .cell.named.type-css {
+            background-color: var(--cell-color-named-css);
+        }
+        
+        .cell.named {
+            color: var(--text-color-light);
+            /* Fonte responsiva para o nome do conceito */
+            font-size: clamp(12px, 2vw, 18px);
+        }
+        
+        /* Estado 3: Resposta final revelada */
+        .cell.revealed {
+            background-color: var(--cell-color-revealed);
+            color: var(--text-color-dark);
+            border: 1px solid var(--border-color);
+            font-weight: normal;
+            cursor: default;
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 10px;
+             /* Fonte responsiva para a resposta */
+            font-size: clamp(10px, 1.4vw, 15px);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Campo Minado: CSS</h1>
+<div class="grid-container" id="minefield"></div>
+
+<script>
+    const minefield = document.getElementById('minefield');
+    const items = [
+        // 50 Propriedades CSS
+        { type: 'css', name: 'color', answer: 'Define a cor do texto de um elemento.' },
+        { type: 'css', name: 'background-color', answer: 'Define a cor de fundo de um elemento.' },
+        { type: 'css', name: 'font-size', answer: 'Define o tamanho da fonte do texto.' },
+        { type: 'css', name: 'font-family', answer: 'Especifica a família da fonte (ex: Arial, sans-serif).' },
+        { type: 'css', name: 'font-weight', answer: 'Define a espessura (peso) da fonte (ex: bold).' },
+        { type: 'css', name: 'text-align', answer: 'Alinha o texto horizontalmente (left, center, right).' },
+        { type: 'css', name: 'width', answer: 'Define a largura de um elemento.' },
+        { type: 'css', name: 'height', answer: 'Define a altura de um elemento.' },
+        { type: 'css', name: 'margin', answer: 'Define as margens externas de um elemento.' },
+        { type: 'css', name: 'padding', answer: 'Define o espaçamento interno (preenchimento) de um elemento.' },
+        { type: 'css', name: 'border', answer: 'Define a borda de um elemento (espessura, estilo, cor).' },
+        { type: 'css', name: 'display', answer: 'Especifica o comportamento de exibição de um elemento (block, inline, flex).' },
+        { type: 'css', name: 'position', answer: 'Define o método de posicionamento (static, relative, absolute, fixed).' },
+        { type: 'css', name: 'top', answer: 'Define a posição do topo para um elemento posicionado.' },
+        { type: 'css', name: 'left', answer: 'Define a posição da esquerda para um elemento posicionado.' },
+        { type: 'css', name: 'overflow', answer: 'Controla o que acontece quando o conteúdo transborda seu contêiner.' },
+        { type: 'css', name: 'z-index', answer: 'Especifica a ordem de empilhamento de elementos posicionados.' },
+        { type: 'css', name: 'opacity', answer: 'Define o nível de transparência de um elemento.' },
+        { type: 'css', name: 'background-image', answer: 'Aplica uma imagem como fundo de um elemento.' },
+        { type: 'css', name: 'background-size', answer: 'Define o tamanho da imagem de fundo.' },
+        { type: 'css', name: 'cursor', answer: 'Muda o estilo do cursor do mouse ao passar sobre um elemento.' },
+        { type: 'css', name: 'list-style', answer: 'Personaliza o estilo dos marcadores de uma lista.' },
+        { type: 'css', name: 'text-decoration', answer: 'Adiciona decoração ao texto (underline, none).' },
+        { type: 'css', name: 'line-height', answer: 'Define a altura de uma linha de texto.' },
+        { type: 'css', name: 'border-radius', answer: 'Arredonda os cantos da borda de um elemento.' },
+    ];
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    shuffle(items);
+
+    items.forEach((item, index) => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        
+        cell.textContent = index + 1;
+        
+        cell.dataset.name = item.name;
+        cell.dataset.answer = item.answer;
+        cell.dataset.type = item.type; // Guarda o tipo (html ou css)
+
+        cell.addEventListener('click', function() {
+            if (this.classList.contains('revealed')) {
+                return;
+            }
+            if (this.classList.contains('named')) {
+                this.classList.remove('named', 'type-html', 'type-css');
+                this.classList.add('revealed');
+                this.textContent = this.dataset.answer;
+                return;
+            }
+            if (!this.classList.contains('named')) {
+                this.classList.add('named');
+                // Adiciona uma classe específica para o tipo para podermos colorir diferente
+                this.classList.add(`type-${this.dataset.type}`);
+                this.textContent = this.dataset.name;
+                return;
+            }
+        });
+
+        minefield.appendChild(cell);
+    });
+</script>
+
+</body>
+</html>
