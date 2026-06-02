@@ -1,184 +1,299 @@
-<!DOCTYPE html>
-<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campo Minado HTML/CSS - Responsivo</title>
-    <style>
-        :root {
-            --grid-gap: 8px;
-            --background-color: #702a2a;
-            --cell-color-initial: #000000;   
-            --cell-color-named-html: #16bd10; /* Laranja HTML */
-            --cell-color-named-css: #1572b6;  /* Azul CSS */
-            --cell-color-revealed: #24c015; 
-            --text-color-light: #ffffff;
-            --text-color-dark: #000000;
-            --border-color: #ceb12f;
-            --border-radius: 8px;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: var(--background-color);
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        
-        h1 {
-            color: #ff719c;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .grid-container {
-            display: grid;
-            width: 100%;
-            max-width: 1400px;
-            /* Layout 10x10 responsivo */
-            grid-template-columns: repeat(10, 1fr);
-            gap: var(--grid-gap);
-        }
-
-        .cell {
-            aspect-ratio: 1 / 1; 
-            width: 100%;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            font-weight: bold;
-            padding: 5px;
-            box-sizing: border-box;
-            transition: transform 0.3s ease, background-color 0.3s, color 0.3s;
-            user-select: none;
-            background-color: var(--cell-color-initial);
-            color: var(--text-color-light);
-            /* Fonte responsiva para o número inicial */
-            font-size: clamp(16px, 4vw, 32px);
-        }
-
-        .cell:not(.revealed):hover {
-            transform: scale(1.05);
-            z-index: 10;
-        }
-
-        /* Estado 2: Nome da tag/propriedade revelado */
-        .cell.named.type-html {
-            background-color: var(--cell-color-named-html);
-        }
-        
-        .cell.named.type-css {
-            background-color: var(--cell-color-named-css);
-        }
-        
-        .cell.named {
-            color: var(--text-color-light);
-            /* Fonte responsiva para o nome do conceito */
-            font-size: clamp(12px, 2vw, 18px);
-        }
-        
-        /* Estado 3: Resposta final revelada */
-        .cell.revealed {
-            background-color: var(--cell-color-revealed);
-            color: var(--text-color-dark);
-            border: 1px solid var(--border-color);
-            font-weight: normal;
-            cursor: default;
-            justify-content: flex-start;
-            align-items: flex-start;
-            padding: 10px;
-             /* Fonte responsiva para a resposta */
-            font-size: clamp(10px, 1.4vw, 15px);
-            line-height: 1.4;
-        }
-    </style>
+    <title>AutoUsados Premium</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- SEU CSS (verifique o nome do arquivo) -->
+    <link rel="stylesheet" href="style.css?v=2">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 </head>
 <body>
 
-<h1>Campo Minado: CSS</h1>
-<div class="grid-container" id="minefield"></div>
+    <!-- ==================== HEADER ==================== -->
+    <header class="header">
+        <div class="container header-content">
+            <a href="#" class="logo" id="logoHome">
+                <i class="fas fa-steering-wheel"></i> 
+                <span>Auto</span><span class="logo-accent">Usados</span>
+            </a>
+            <nav class="nav-links" id="navLinks">
+                <a href="#" class="nav-link active" data-tela="todos">Todos</a>
+                <a href="#" class="nav-link" data-tela="destaques">⭐ Destaques</a>
+                <button class="btn btn-outline" id="btnAnunciar" style="display:none;">
+                    <i class="fas fa-plus-circle"></i> Anunciar
+                </button>
+                <button class="btn btn-login" id="btnLogin">
+                    <i class="fas fa-user"></i> <span id="loginText">Entrar</span>
+                </button>
+                <button class="btn btn-logout" id="btnLogout" style="display:none;">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </nav>
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
 
-<script>
-    const minefield = document.getElementById('minefield');
-    const items = [
-        // 50 Propriedades CSS
-        { type: 'css', name: 'color', answer: 'Define a cor do texto de um elemento.' },
-        { type: 'css', name: 'background-color', answer: 'Define a cor de fundo de um elemento.' },
-        { type: 'css', name: 'font-size', answer: 'Define o tamanho da fonte do texto.' },
-        { type: 'css', name: 'font-family', answer: 'Especifica a família da fonte (ex: Arial, sans-serif).' },
-        { type: 'css', name: 'font-weight', answer: 'Define a espessura (peso) da fonte (ex: bold).' },
-        { type: 'css', name: 'text-align', answer: 'Alinha o texto horizontalmente (left, center, right).' },
-        { type: 'css', name: 'width', answer: 'Define a largura de um elemento.' },
-        { type: 'css', name: 'height', answer: 'Define a altura de um elemento.' },
-        { type: 'css', name: 'margin', answer: 'Define as margens externas de um elemento.' },
-        { type: 'css', name: 'padding', answer: 'Define o espaçamento interno (preenchimento) de um elemento.' },
-        { type: 'css', name: 'border', answer: 'Define a borda de um elemento (espessura, estilo, cor).' },
-        { type: 'css', name: 'display', answer: 'Especifica o comportamento de exibição de um elemento (block, inline, flex).' },
-        { type: 'css', name: 'position', answer: 'Define o método de posicionamento (static, relative, absolute, fixed).' },
-        { type: 'css', name: 'top', answer: 'Define a posição do topo para um elemento posicionado.' },
-        { type: 'css', name: 'left', answer: 'Define a posição da esquerda para um elemento posicionado.' },
-        { type: 'css', name: 'overflow', answer: 'Controla o que acontece quando o conteúdo transborda seu contêiner.' },
-        { type: 'css', name: 'z-index', answer: 'Especifica a ordem de empilhamento de elementos posicionados.' },
-        { type: 'css', name: 'opacity', answer: 'Define o nível de transparência de um elemento.' },
-        { type: 'css', name: 'background-image', answer: 'Aplica uma imagem como fundo de um elemento.' },
-        { type: 'css', name: 'background-size', answer: 'Define o tamanho da imagem de fundo.' },
-        { type: 'css', name: 'cursor', answer: 'Muda o estilo do cursor do mouse ao passar sobre um elemento.' },
-        { type: 'css', name: 'list-style', answer: 'Personaliza o estilo dos marcadores de uma lista.' },
-        { type: 'css', name: 'text-decoration', answer: 'Adiciona decoração ao texto (underline, none).' },
-        { type: 'css', name: 'line-height', answer: 'Define a altura de uma linha de texto.' },
-        { type: 'css', name: 'border-radius', answer: 'Arredonda os cantos da borda de um elemento.' },
-    ];
+    <!-- ==================== HERO SEARCH ==================== -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="container hero-content">
+            <h1 class="hero-title">
+                Encontre o <span class="text-gradient">carro perfeito</span> para você
+            </h1>
+            <p class="hero-subtitle">
+                Os melhores veículos usados com procedência e a melhor experiência de compra
+            </p>
+            
+            <div class="search-card">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Digite marca, modelo ou palavra-chave...">
+                </div>
+                
+                <div class="search-filters">
+                    <select id="filterMarca" class="filter-select">
+                        <option value="">🏷️ Todas as marcas</option>
+                    </select>
+                    <select id="filterCombustivel" class="filter-select">
+                        <option value="">⛽ Combustível</option>
+                        <option value="Gasolina">Gasolina</option>
+                        <option value="Etanol">Etanol</option>
+                        <option value="Flex">Flex</option>
+                        <option value="Diesel">Diesel</option>
+                        <option value="Elétrico">Elétrico</option>
+                        <option value="Híbrido">Híbrido</option>
+                    </select>
+                    <select id="filterCambio" class="filter-select">
+                        <option value="">⚙️ Câmbio</option>
+                        <option value="Manual">Manual</option>
+                        <option value="Automático">Automático</option>
+                        <option value="CVT">CVT</option>
+                        <option value="Automatizado">Automatizado</option>
+                    </select>
+                    <input type="number" id="filterAnoMin" placeholder="📅 Ano mín." class="filter-input" min="1990" max="2026">
+                    <input type="number" id="filterPrecoMax" placeholder="💰 Preço máx." class="filter-input" min="0" step="1000">
+                    
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" id="btnFiltrar">
+                            <i class="fas fa-filter"></i> Filtrar
+                        </button>
+                        <button class="btn btn-secondary" id="btnLimparFiltros">
+                            <i class="fas fa-times"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    function shuffle(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
-
-    shuffle(items);
-
-    items.forEach((item, index) => {
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="main-content container">
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Buscando os melhores carros...</p>
+        </div>
         
-        cell.textContent = index + 1;
+        <!-- Estado vazio -->
+        <div class="empty-state" id="emptyState" style="display:none;">
+            <i class="fas fa-car-side fa-4x"></i>
+            <h3>Nenhum veículo encontrado</h3>
+            <p>Tente ajustar os filtros ou cadastre um novo anúncio.</p>
+        </div>
         
-        cell.dataset.name = item.name;
-        cell.dataset.answer = item.answer;
-        cell.dataset.type = item.type; // Guarda o tipo (html ou css)
+        <!-- Grid de carros -->
+        <div class="car-grid" id="carGrid"></div>
+        
+        <!-- Carregar mais -->
+        <div class="load-more-container" id="loadMoreContainer" style="display:none;">
+            <button class="btn btn-outline btn-lg" id="btnLoadMore">
+                <i class="fas fa-chevron-down"></i> Carregar mais
+            </button>
+        </div>
+    </main>
 
-        cell.addEventListener('click', function() {
-            if (this.classList.contains('revealed')) {
-                return;
-            }
-            if (this.classList.contains('named')) {
-                this.classList.remove('named', 'type-html', 'type-css');
-                this.classList.add('revealed');
-                this.textContent = this.dataset.answer;
-                return;
-            }
-            if (!this.classList.contains('named')) {
-                this.classList.add('named');
-                // Adiciona uma classe específica para o tipo para podermos colorir diferente
-                this.classList.add(`type-${this.dataset.type}`);
-                this.textContent = this.dataset.name;
-                return;
-            }
-        });
+    <!-- ==================== MODAIS (estrutura mantida) ==================== -->
+    <!-- Modal Login/Registro -->
+    <div class="modal-overlay" id="modalLogin">
+        <div class="modal">
+            <button class="modal-close" data-close="modalLogin">&times;</button>
+            <div class="modal-header">
+                <h2 id="modalLoginTitle">Entrar</h2>
+                <p id="modalLoginSub">Acesse sua conta para anunciar</p>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="loginEmail">E-mail</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginSenha">Senha</label>
+                    <input type="password" id="loginSenha" placeholder="••••••••">
+                </div>
+                <div class="form-group" id="loginNomeGroup" style="display:none;">
+                    <label for="loginNome">Nome</label>
+                    <input type="text" id="loginNome" placeholder="Seu nome">
+                </div>
+                <button class="btn btn-primary btn-block" id="btnLoginSubmit">Entrar</button>
+                <p class="modal-toggle-text">
+                    <span id="toggleAuthText">Não tem conta?</span>
+                    <a href="#" id="toggleAuthLink">Cadastre-se</a>
+                </p>
+                <div class="auth-error" id="authError" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
 
-        minefield.appendChild(cell);
-    });
-</script>
+    <!-- Modal Anunciar/Editar -->
+    <div class="modal-overlay" id="modalCarro">
+        <div class="modal modal-lg">
+            <button class="modal-close" data-close="modalCarro">&times;</button>
+            <div class="modal-header">
+                <h2 id="modalCarroTitle">Anunciar Carro</h2>
+                <p>Preencha os dados do veículo</p>
+            </div>
+            <div class="modal-body">
+                <form id="formCarro" novalidate>
+                    <input type="hidden" id="carroId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carroMarca">Marca *</label>
+                            <input type="text" id="carroMarca" list="marcasList" placeholder="Ex: Volkswagen" required>
+                            <datalist id="marcasList">
+                                <option value="Volkswagen"><option value="Chevrolet"><option value="Ford">
+                                <option value="Fiat"><option value="Toyota"><option value="Honda">
+                                <option value="Hyundai"><option value="Renault"><option value="Jeep">
+                                <option value="Nissan"><option value="BMW"><option value="Mercedes-Benz"><option value="Audi">
+                            </datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="carroModelo">Modelo *</label>
+                            <input type="text" id="carroModelo" placeholder="Ex: Golf GTI" required>
+                        </div>
+                    </div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="carroAno">Ano *</label>
+                            <input type="number" id="carroAno" placeholder="Ex: 2022" min="1990" max="2026" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="carroPreco">Preço (R$) *</label>
+                            <input type="number" id="carroPreco" placeholder="Ex: 85000" min="0" step="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="carroKm">Quilometragem *</label>
+                            <input type="number" id="carroKm" placeholder="Ex: 45000" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="carroCombustivel">Combustível *</label>
+                            <select id="carroCombustivel" required>
+                                <option value="">Selecione</option>
+                                <option value="Gasolina">Gasolina</option><option value="Etanol">Etanol</option>
+                                <option value="Flex">Flex</option><option value="Diesel">Diesel</option>
+                                <option value="Elétrico">Elétrico</option><option value="Híbrido">Híbrido</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carroCambio">Câmbio *</label>
+                            <select id="carroCambio" required>
+                                <option value="">Selecione</option>
+                                <option value="Manual">Manual</option><option value="Automático">Automático</option>
+                                <option value="CVT">CVT</option><option value="Automatizado">Automatizado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carroCor">Cor</label>
+                            <select id="carroCor">
+                                <option value="">Selecione</option>
+                                <option value="Branco">Branco</option><option value="Preto">Preto</option>
+                                <option value="Prata">Prata</option><option value="Cinza">Cinza</option>
+                                <option value="Vermelho">Vermelho</option><option value="Azul">Azul</option>
+                                <option value="Verde">Verde</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="carroImagem">URL da Imagem</label>
+                        <input type="url" id="carroImagem" placeholder="https://exemplo.com/foto-carro.jpg">
+                        <small>Cole o link de uma imagem do carro (opcional)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="carroDescricao">Descrição</label>
+                        <textarea id="carroDescricao" rows="3" placeholder="Descreva o estado do veículo, opcionais, etc."></textarea>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="carroDestaque">
+                            <span>Anúncio em destaque ⭐</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="carroVendido">
+                            <span>Veículo vendido 🏁</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="btnSalvarCarro">
+                        <i class="fas fa-save"></i> Salvar Anúncio
+                    </button>
+                </form>
+                <div class="form-error" id="formError" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Modal Detalhes -->
+    <div class="modal-overlay" id="modalDetalhes">
+        <div class="modal modal-lg modal-detalhes">
+            <button class="modal-close" data-close="modalDetalhes">&times;</button>
+            <div class="modal-body" id="detalhesContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmação -->
+    <div class="modal-overlay" id="modalConfirmacao">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3>Confirmar exclusão</h3>
+                <p>Tem certeza que deseja excluir este anúncio?</p>
+            </div>
+            <div class="modal-body">
+                <p class="confirm-text" id="confirmText"></p>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" data-close="modalConfirmacao">Cancelar</button>
+                    <button class="btn btn-danger" id="btnConfirmarExclusao">Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 AutoUsados Premium — Todos os direitos reservados</p>
+            <p class="footer-tagline">Conectando você ao carro ideal.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
