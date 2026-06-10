@@ -1,19 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoUsados Premium</title>
-    
-    <!-- Google Fonts -->
+    <title>RPG Fichas - Crie seus personagens</title>
+
+    <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- SEU CSS (verifique o nome do arquivo) -->
-    <link rel="stylesheet" href="style.css?v=2">
-    
+
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="style.css?v=1">
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -21,18 +23,16 @@
 </head>
 <body>
 
-    <!-- ==================== HEADER ==================== -->
+    <!-- ============== HEADER ============== -->
     <header class="header">
         <div class="container header-content">
             <a href="#" class="logo" id="logoHome">
-                <i class="fas fa-steering-wheel"></i> 
-                <span>Auto</span><span class="logo-accent">Usados</span>
+                <i class="fas fa-dragon"></i>
+                <span class="logo-text">RPG</span><span class="logo-accent">Fichas</span>
             </a>
             <nav class="nav-links" id="navLinks">
-                <a href="#" class="nav-link active" data-tela="todos">Todos</a>
-                <a href="#" class="nav-link" data-tela="destaques">⭐ Destaques</a>
-                <button class="btn btn-outline" id="btnAnunciar" style="display:none;">
-                    <i class="fas fa-plus-circle"></i> Anunciar
+                <button class="btn btn-outline" id="btnNovaFicha" style="display:none;">
+                    <i class="fas fa-feather"></i> Nova Ficha
                 </button>
                 <button class="btn btn-login" id="btnLogin">
                     <i class="fas fa-user"></i> <span id="loginText">Entrar</span>
@@ -47,93 +47,77 @@
         </div>
     </header>
 
-    <!-- ==================== HERO SEARCH ==================== -->
+    <!-- ============== SEÇÃO DE BUSCA ============== -->
     <section class="hero">
         <div class="hero-bg"></div>
         <div class="container hero-content">
-            <h1 class="hero-title">
-                Encontre o <span class="text-gradient">carro perfeito</span> para você
-            </h1>
-            <p class="hero-subtitle">
-                Os melhores veículos usados com procedência e a melhor experiência de compra
-            </p>
-            
+            <h1 class="hero-title">Forje seu <span class="text-gradient">Herói</span></h1>
+            <p class="hero-subtitle">Crie e gerencie fichas de personagem para suas campanhas de RPG</p>
             <div class="search-card">
                 <div class="search-input-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Digite marca, modelo ou palavra-chave...">
+                    <input type="text" id="searchInput" placeholder="Buscar por nome, raça ou classe...">
                 </div>
-                
                 <div class="search-filters">
-                    <select id="filterMarca" class="filter-select">
-                        <option value="">🏷️ Todas as marcas</option>
+                    <select id="filterClasse" class="filter-select">
+                        <option value="">⚔️ Todas as classes</option>
+                        <option value="Guerreiro">Guerreiro</option>
+                        <option value="Mago">Mago</option>
+                        <option value="Ladino">Ladino</option>
+                        <option value="Clérigo">Clérigo</option>
+                        <option value="Ranger">Ranger</option>
+                        <option value="Paladino">Paladino</option>
+                        <option value="Bardo">Bardo</option>
+                        <option value="Druida">Druida</option>
                     </select>
-                    <select id="filterCombustivel" class="filter-select">
-                        <option value="">⛽ Combustível</option>
-                        <option value="Gasolina">Gasolina</option>
-                        <option value="Etanol">Etanol</option>
-                        <option value="Flex">Flex</option>
-                        <option value="Diesel">Diesel</option>
-                        <option value="Elétrico">Elétrico</option>
-                        <option value="Híbrido">Híbrido</option>
+                    <select id="filterRaca" class="filter-select">
+                        <option value="">🧝 Todas as raças</option>
+                        <option value="Humano">Humano</option>
+                        <option value="Elfo">Elfo</option>
+                        <option value="Anão">Anão</option>
+                        <option value="Halfling">Halfling</option>
+                        <option value="Meio-Orc">Meio-Orc</option>
+                        <option value="Tiefling">Tiefling</option>
                     </select>
-                    <select id="filterCambio" class="filter-select">
-                        <option value="">⚙️ Câmbio</option>
-                        <option value="Manual">Manual</option>
-                        <option value="Automático">Automático</option>
-                        <option value="CVT">CVT</option>
-                        <option value="Automatizado">Automatizado</option>
-                    </select>
-                    <input type="number" id="filterAnoMin" placeholder="📅 Ano mín." class="filter-input" min="1990" max="2026">
-                    <input type="number" id="filterPrecoMax" placeholder="💰 Preço máx." class="filter-input" min="0" step="1000">
-                    
-                    <div class="filter-actions">
-                        <button class="btn btn-primary" id="btnFiltrar">
-                            <i class="fas fa-filter"></i> Filtrar
-                        </button>
-                        <button class="btn btn-secondary" id="btnLimparFiltros">
-                            <i class="fas fa-times"></i> Limpar
-                        </button>
-                    </div>
+                    <button class="btn btn-primary" id="btnFiltrar">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                    <button class="btn btn-secondary" id="btnLimparFiltros">
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ==================== MAIN CONTENT ==================== -->
+    <!-- ============== MAIN ============== -->
     <main class="main-content container">
-        <!-- Loading -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Buscando os melhores carros...</p>
+            <p>Invocando personagens...</p>
         </div>
-        
-        <!-- Estado vazio -->
         <div class="empty-state" id="emptyState" style="display:none;">
-            <i class="fas fa-car-side fa-4x"></i>
-            <h3>Nenhum veículo encontrado</h3>
-            <p>Tente ajustar os filtros ou cadastre um novo anúncio.</p>
+            <i class="fas fa-scroll fa-3x"></i>
+            <h3>Nenhuma ficha encontrada</h3>
+            <p>Você ainda não criou nenhum personagem ou os filtros não retornaram resultados.</p>
         </div>
-        
-        <!-- Grid de carros -->
-        <div class="car-grid" id="carGrid"></div>
-        
-        <!-- Carregar mais -->
+        <div class="ficha-grid" id="fichaGrid"></div>
         <div class="load-more-container" id="loadMoreContainer" style="display:none;">
-            <button class="btn btn-outline btn-lg" id="btnLoadMore">
+            <button class="btn btn-outline" id="btnLoadMore">
                 <i class="fas fa-chevron-down"></i> Carregar mais
             </button>
         </div>
     </main>
 
-    <!-- ==================== MODAIS (estrutura mantida) ==================== -->
+    <!-- ============== MODAIS ============== -->
+
     <!-- Modal Login/Registro -->
     <div class="modal-overlay" id="modalLogin">
         <div class="modal">
             <button class="modal-close" data-close="modalLogin">&times;</button>
             <div class="modal-header">
                 <h2 id="modalLoginTitle">Entrar</h2>
-                <p id="modalLoginSub">Acesse sua conta para anunciar</p>
+                <p id="modalLoginSub">Acesse sua conta para gerenciar fichas</p>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -158,97 +142,108 @@
         </div>
     </div>
 
-    <!-- Modal Anunciar/Editar -->
-    <div class="modal-overlay" id="modalCarro">
+    <!-- Modal Ficha (Criar/Editar) -->
+    <div class="modal-overlay" id="modalFicha">
         <div class="modal modal-lg">
-            <button class="modal-close" data-close="modalCarro">&times;</button>
+            <button class="modal-close" data-close="modalFicha">&times;</button>
             <div class="modal-header">
-                <h2 id="modalCarroTitle">Anunciar Carro</h2>
-                <p>Preencha os dados do veículo</p>
+                <h2 id="modalFichaTitle">Nova Ficha</h2>
+                <p>Preencha os dados do personagem</p>
             </div>
             <div class="modal-body">
-                <form id="formCarro" novalidate>
-                    <input type="hidden" id="carroId">
+                <form id="formFicha" novalidate>
+                    <input type="hidden" id="fichaId">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="carroMarca">Marca *</label>
-                            <input type="text" id="carroMarca" list="marcasList" placeholder="Ex: Volkswagen" required>
-                            <datalist id="marcasList">
-                                <option value="Volkswagen"><option value="Chevrolet"><option value="Ford">
-                                <option value="Fiat"><option value="Toyota"><option value="Honda">
-                                <option value="Hyundai"><option value="Renault"><option value="Jeep">
-                                <option value="Nissan"><option value="BMW"><option value="Mercedes-Benz"><option value="Audi">
-                            </datalist>
+                            <label for="fichaNome">Nome do Personagem *</label>
+                            <input type="text" id="fichaNome" placeholder="Ex: Drizzt Do'Urden" required>
                         </div>
                         <div class="form-group">
-                            <label for="carroModelo">Modelo *</label>
-                            <input type="text" id="carroModelo" placeholder="Ex: Golf GTI" required>
+                            <label for="fichaRaca">Raça *</label>
+                            <select id="fichaRaca" required>
+                                <option value="">Selecione</option>
+                                <option value="Humano">Humano</option>
+                                <option value="Elfo">Elfo</option>
+                                <option value="Anão">Anão</option>
+                                <option value="Halfling">Halfling</option>
+                                <option value="Meio-Orc">Meio-Orc</option>
+                                <option value="Tiefling">Tiefling</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="form-row form-row-3">
+                    <div class="form-row">
                         <div class="form-group">
-                            <label for="carroAno">Ano *</label>
-                            <input type="number" id="carroAno" placeholder="Ex: 2022" min="1990" max="2026" required>
+                            <label for="fichaClasse">Classe *</label>
+                            <select id="fichaClasse" required>
+                                <option value="">Selecione</option>
+                                <option value="Guerreiro">Guerreiro</option>
+                                <option value="Mago">Mago</option>
+                                <option value="Ladino">Ladino</option>
+                                <option value="Clérigo">Clérigo</option>
+                                <option value="Ranger">Ranger</option>
+                                <option value="Paladino">Paladino</option>
+                                <option value="Bardo">Bardo</option>
+                                <option value="Druida">Druida</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label for="carroPreco">Preço (R$) *</label>
-                            <input type="number" id="carroPreco" placeholder="Ex: 85000" min="0" step="100" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="carroKm">Quilometragem *</label>
-                            <input type="number" id="carroKm" placeholder="Ex: 45000" min="0" required>
+                            <label for="fichaNivel">Nível</label>
+                            <input type="number" id="fichaNivel" value="1" min="1" max="20" required>
                         </div>
                     </div>
-                    <div class="form-row form-row-3">
+
+                    <!-- Atributos -->
+                    <div class="atributos-section">
+                        <h3 class="form-section-title">Atributos</h3>
+                        <div class="form-row form-row-3">
+                            <div class="form-group">
+                                <label for="fichaForca">Força</label>
+                                <input type="number" id="fichaForca" value="10" min="1" max="30" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fichaDestreza">Destreza</label>
+                                <input type="number" id="fichaDestreza" value="10" min="1" max="30" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fichaConstituicao">Constituição</label>
+                                <input type="number" id="fichaConstituicao" value="10" min="1" max="30" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fichaInteligencia">Inteligência</label>
+                                <input type="number" id="fichaInteligencia" value="10" min="1" max="30" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fichaSabedoria">Sabedoria</label>
+                                <input type="number" id="fichaSabedoria" value="10" min="1" max="30" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fichaCarisma">Carisma</label>
+                                <input type="number" id="fichaCarisma" value="10" min="1" max="30" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group">
-                            <label for="carroCombustivel">Combustível *</label>
-                            <select id="carroCombustivel" required>
-                                <option value="">Selecione</option>
-                                <option value="Gasolina">Gasolina</option><option value="Etanol">Etanol</option>
-                                <option value="Flex">Flex</option><option value="Diesel">Diesel</option>
-                                <option value="Elétrico">Elétrico</option><option value="Híbrido">Híbrido</option>
-                            </select>
+                            <label for="fichaHP">Pontos de Vida (HP)</label>
+                            <input type="number" id="fichaHP" value="10" min="1" required>
                         </div>
                         <div class="form-group">
-                            <label for="carroCambio">Câmbio *</label>
-                            <select id="carroCambio" required>
-                                <option value="">Selecione</option>
-                                <option value="Manual">Manual</option><option value="Automático">Automático</option>
-                                <option value="CVT">CVT</option><option value="Automatizado">Automatizado</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="carroCor">Cor</label>
-                            <select id="carroCor">
-                                <option value="">Selecione</option>
-                                <option value="Branco">Branco</option><option value="Preto">Preto</option>
-                                <option value="Prata">Prata</option><option value="Cinza">Cinza</option>
-                                <option value="Vermelho">Vermelho</option><option value="Azul">Azul</option>
-                                <option value="Verde">Verde</option>
-                            </select>
+                            <label for="fichaImagem">URL da Imagem</label>
+                            <input type="url" id="fichaImagem" placeholder="https://exemplo.com/imagem.jpg">
+                            <small>Cole um link de imagem para o personagem (opcional)</small>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="carroImagem">URL da Imagem</label>
-                        <input type="url" id="carroImagem" placeholder="https://exemplo.com/foto-carro.jpg">
-                        <small>Cole o link de uma imagem do carro (opcional)</small>
+                        <label for="fichaEquipamentos">Equipamentos</label>
+                        <textarea id="fichaEquipamentos" rows="2" placeholder="Espada longa, escudo, poção de cura..."></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="carroDescricao">Descrição</label>
-                        <textarea id="carroDescricao" rows="3" placeholder="Descreva o estado do veículo, opcionais, etc."></textarea>
+                        <label for="fichaDescricao">História / Descrição</label>
+                        <textarea id="fichaDescricao" rows="3" placeholder="Conte a história do seu personagem..."></textarea>
                     </div>
-                    <div class="form-group checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="carroDestaque">
-                            <span>Anúncio em destaque ⭐</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="carroVendido">
-                            <span>Veículo vendido 🏁</span>
-                        </label>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block" id="btnSalvarCarro">
-                        <i class="fas fa-save"></i> Salvar Anúncio
+                    <button type="submit" class="btn btn-primary btn-block" id="btnSalvarFicha">
+                        <i class="fas fa-save"></i> Salvar Ficha
                     </button>
                 </form>
                 <div class="form-error" id="formError" style="display:none;"></div>
@@ -256,7 +251,7 @@
         </div>
     </div>
 
-    <!-- Modal Detalhes -->
+    <!-- Modal Detalhes da Ficha -->
     <div class="modal-overlay" id="modalDetalhes">
         <div class="modal modal-lg modal-detalhes">
             <button class="modal-close" data-close="modalDetalhes">&times;</button>
@@ -264,12 +259,12 @@
         </div>
     </div>
 
-    <!-- Modal Confirmação -->
+    <!-- Modal Confirmação de Exclusão -->
     <div class="modal-overlay" id="modalConfirmacao">
         <div class="modal modal-sm">
             <div class="modal-header">
                 <h3>Confirmar exclusão</h3>
-                <p>Tem certeza que deseja excluir este anúncio?</p>
+                <p>Tem certeza que deseja excluir esta ficha?</p>
             </div>
             <div class="modal-body">
                 <p class="confirm-text" id="confirmText"></p>
@@ -281,14 +276,14 @@
         </div>
     </div>
 
-    <!-- Toast -->
+    <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>© 2026 AutoUsados Premium — Todos os direitos reservados</p>
-            <p class="footer-tagline">Conectando você ao carro ideal.</p>
+            <p>© 2026 RPG Fichas — Todos os direitos reservados</p>
+            <p class="footer-tagline">Que os dados estejam sempre a seu favor.</p>
         </div>
     </footer>
 

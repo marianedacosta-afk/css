@@ -1,737 +1,453 @@
-// app.js
-// ==================== APLICATIVO AUTOUSADOS ====================
-
-// ---------- ESTADO GLOBAL ----------
+// app.js - RPG Fichas
 let currentUser = null;
-let carrosCache = [];
-let ultimoDocumento = null;
+let fichasCache = [];
+let ultimoDoc = null;
 let carregandoMais = false;
 let todosCarregados = false;
-const CARROS_POR_PAGINA = 12;
-let carroParaExcluir = null;
+const FICHAS_POR_PAGINA = 10;
+let fichaParaExcluir = null;
 
-// ---------- ELEMENTOS DOM ----------
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// ---------- INICIALIZAÇÃO ----------
 document.addEventListener('DOMContentLoaded', () => {
-    setupAuthListener();
-    setupEventListeners();
-    carregarCarros();
-    carregarMarcasParaFiltro();
+    setupAuth();
+    setupListeners();
+    carregarFichas();
 });
 
-// ==================== AUTENTICAÇÃO ====================
-function setupAuthListener() {
-    auth.onAuthStateChanged((user) => {
+// ========== AUTH ==========
+function setupAuth() {
+    auth.onAuthStateChanged(user => {
         currentUser = user;
-        atualizarUIUsuario(user);
-        if (user) {
-            console.log('👤 Usuário logado:', user.email);
-        } else {
-            console.log('👤 Nenhum usuário logado');
-        }
+        atualizarUI(user);
     });
 }
 
-function atualizarUIUsuario(user) {
+function atualizarUI(user) {
     const loginText = $('#loginText');
     const btnLogin = $('#btnLogin');
     const btnLogout = $('#btnLogout');
-    const btnAnunciar = $('#btnAnunciar');
+    const btnNovaFicha = $('#btnNovaFicha');
 
     if (user) {
-        if (loginText) loginText.textContent = user.displayName || user.email?.split('@')[0] || 'Conta';
-        if (btnLogin) btnLogin.style.display = 'none';
-        if (btnLogout) btnLogout.style.display = 'inline-flex';
-        if (btnAnunciar) btnAnunciar.style.display = 'inline-flex';
+        loginText.textContent = user.displayName || user.email.split('@')[0];
+        btnLogin.style.display = 'none';
+        btnLogout.style.display = 'inline-flex';
+        btnNovaFicha.style.display = 'inline-flex';
     } else {
-        if (loginText) loginText.textContent = 'Entrar';
-        if (btnLogin) btnLogin.style.display = 'inline-flex';
-        if (btnLogout) btnLogout.style.display = 'none';
-        if (btnAnunciar) btnAnunciar.style.display = 'none';
+        loginText.textContent = 'Entrar';
+        btnLogin.style.display = 'inline-flex';
+        btnLogout.style.display = 'none';
+        btnNovaFicha.style.display = 'none';
     }
-    // Atualiza visibilidade dos botões de ação nos cards
-    renderizarAcoesCards();
+    atualizarVisibilidadeBotoes();
 }
 
-function renderizarAcoesCards() {
-    const botoesAcao = $$('.car-card-actions');
-    botoesAcao.forEach((div) => {
-        if (currentUser) {
-            div.style.display = 'flex';
-        } else {
-            div.style.display = 'none';
-        }
+function atualizarVisibilidadeBotoes() {
+    $$('.ficha-card-actions').forEach(div => {
+        div.style.display = currentUser ? 'flex' : 'none';
     });
 }
 
-// ==================== EVENT LISTENERS ====================
-function setupEventListeners() {
-    // Menu mobile
+// ========== EVENTOS ==========
+function setupListeners() {
     $('#menuToggle')?.addEventListener('click', () => {
         $('.nav-links').classList.toggle('open');
     });
 
-    // Links de navegação
-    $$('.nav-link').forEach((link) => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            $$('.nav-link').forEach((l) => l.classList.remove('active'));
-            link.classList.add('active');
-            const tela = link.dataset.tela;
-            if (tela === 'destaques') {
-                carregarCarros(true);
-            } else {
-                carregarCarros(false);
-            }
-            $('.nav-links').classList.remove('open');
-        });
-    });
-
-    // Logo volta para home
-    $('#logoHome')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        $$('.nav-link').forEach((l) => l.classList.remove('active'));
-        const todosLink = document.querySelector('.nav-link[data-tela="todos"]');
-        if (todosLink) todosLink.classList.add('active');
-        carregarCarros(false);
-        limparFiltros();
-    });
-
-    // Botão Login
     $('#btnLogin')?.addEventListener('click', () => abrirModal('modalLogin'));
     $('#btnLogout')?.addEventListener('click', logout);
-
-    // Botão Anunciar
-    $('#btnAnunciar')?.addEventListener('click', () => {
+    $('#btnNovaFicha')?.addEventListener('click', () => {
         if (!currentUser) {
             abrirModal('modalLogin');
-            showToast('Faça login para anunciar!', 'warning');
+            showToast('Faça login para criar fichas!', 'warning');
             return;
         }
-        abrirModalCarro(null);
+        abrirModalFicha(null);
     });
 
     // Fechar modais
-    $$('.modal-close, [data-close]').forEach((el) => {
+    $$('.modal-close, [data-close]').forEach(el => {
         el.addEventListener('click', () => {
-            const modalId = el.dataset.close || el.closest('.modal-overlay')?.id;
-            if (modalId) fecharModal(modalId);
+            const id = el.dataset.close || el.closest('.modal-overlay')?.id;
+            if (id) fecharModal(id);
         });
     });
-
-    // Fechar modal ao clicar fora
-    $$('.modal-overlay').forEach((overlay) => {
-        overlay.addEventListener('click', (e) => {
+    $$('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', e => {
             if (e.target === overlay) fecharModal(overlay.id);
         });
     });
 
-    // Toggle login/registro
+    // Login/Registro toggle
+    let isRegister = false;
     $('#toggleAuthLink')?.addEventListener('click', (e) => {
         e.preventDefault();
-        toggleAuthMode();
+        isRegister = !isRegister;
+        $('#modalLoginTitle').textContent = isRegister ? 'Cadastrar' : 'Entrar';
+        $('#modalLoginSub').textContent = isRegister ? 'Crie sua conta' : 'Acesse sua conta';
+        $('#btnLoginSubmit').textContent = isRegister ? 'Cadastrar' : 'Entrar';
+        $('#toggleAuthText').textContent = isRegister ? 'Já tem conta?' : 'Não tem conta?';
+        $('#toggleAuthLink').textContent = isRegister ? 'Entrar' : 'Cadastre-se';
+        $('#loginNomeGroup').style.display = isRegister ? 'block' : 'none';
+        $('#authError').style.display = 'none';
     });
 
-    // Submit login
-    $('#btnLoginSubmit')?.addEventListener('click', handleLoginSubmit);
-
-    // Submit formulário carro
-    $('#formCarro')?.addEventListener('submit', handleSalvarCarro);
-
-    // Busca
-    $('#searchInput')?.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') aplicarFiltros();
-    });
+    $('#btnLoginSubmit')?.addEventListener('click', handleLogin);
+    $('#formFicha')?.addEventListener('submit', salvarFicha);
     $('#btnFiltrar')?.addEventListener('click', aplicarFiltros);
     $('#btnLimparFiltros')?.addEventListener('click', limparFiltros);
-
-    // Carregar mais
-    $('#btnLoadMore')?.addEventListener('click', carregarMaisCarros);
-
-    // Confirmar exclusão
+    $('#searchInput')?.addEventListener('keyup', e => { if (e.key === 'Enter') aplicarFiltros(); });
+    $('#btnLoadMore')?.addEventListener('click', carregarMais);
     $('#btnConfirmarExclusao')?.addEventListener('click', confirmarExclusao);
 
-    // Tecla ESC fecha modais
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            $$('.modal-overlay.active').forEach((m) => fecharModal(m.id));
-        }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') $$('.modal-overlay.active').forEach(m => fecharModal(m.id));
     });
 }
 
-// ==================== MODAIS ====================
-function abrirModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
-}
+// ========== MODAIS ==========
+function abrirModal(id) { document.getElementById(id)?.classList.add('active'); }
+function fecharModal(id) { document.getElementById(id)?.classList.remove('active'); }
 
-function fecharModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
-}
-
-let isRegisterMode = false;
-
-function toggleAuthMode() {
-    isRegisterMode = !isRegisterMode;
-    const title = $('#modalLoginTitle');
-    const sub = $('#modalLoginSub');
-    const btn = $('#btnLoginSubmit');
-    const toggleText = $('#toggleAuthText');
-    const toggleLink = $('#toggleAuthLink');
-    const nomeGroup = $('#loginNomeGroup');
-
-    if (isRegisterMode) {
-        if (title) title.textContent = 'Cadastrar';
-        if (sub) sub.textContent = 'Crie sua conta para anunciar';
-        if (btn) btn.textContent = 'Cadastrar';
-        if (toggleText) toggleText.textContent = 'Já tem conta?';
-        if (toggleLink) toggleLink.textContent = 'Entrar';
-        if (nomeGroup) nomeGroup.style.display = 'block';
-    } else {
-        if (title) title.textContent = 'Entrar';
-        if (sub) sub.textContent = 'Acesse sua conta para anunciar';
-        if (btn) btn.textContent = 'Entrar';
-        if (toggleText) toggleText.textContent = 'Não tem conta?';
-        if (toggleLink) toggleLink.textContent = 'Cadastre-se';
-        if (nomeGroup) nomeGroup.style.display = 'none';
-    }
-    $('#authError').style.display = 'none';
-}
-
-async function handleLoginSubmit() {
+// ========== AUTH FUNCTIONS ==========
+async function handleLogin() {
     const email = $('#loginEmail')?.value.trim();
     const senha = $('#loginSenha')?.value;
     const nome = $('#loginNome')?.value.trim();
     const errorDiv = $('#authError');
+    const isRegister = $('#btnLoginSubmit').textContent === 'Cadastrar';
 
     if (!email || !senha) {
-        if (errorDiv) {
-            errorDiv.textContent = 'Preencha e-mail e senha.';
-            errorDiv.style.display = 'block';
-        }
+        errorDiv.textContent = 'Preencha e-mail e senha.';
+        errorDiv.style.display = 'block';
         return;
     }
-
-    if (isRegisterMode && !nome) {
-        if (errorDiv) {
-            errorDiv.textContent = 'Preencha seu nome.';
-            errorDiv.style.display = 'block';
-        }
-        return;
-    }
-
     try {
-        if (isRegisterMode) {
+        if (isRegister) {
+            if (!nome) { errorDiv.textContent = 'Nome é obrigatório.'; errorDiv.style.display = 'block'; return; }
             const cred = await auth.createUserWithEmailAndPassword(email, senha);
             await cred.user.updateProfile({ displayName: nome });
-            showToast('Conta criada com sucesso!', 'success');
+            showToast('Conta criada!', 'success');
         } else {
             await auth.signInWithEmailAndPassword(email, senha);
-            showToast('Login realizado!', 'success');
+            showToast('Login feito!', 'success');
         }
         fecharModal('modalLogin');
-        isRegisterMode = false;
-        toggleAuthMode();
-        $('#loginEmail').value = '';
-        $('#loginSenha').value = '';
-        $('#loginNome').value = '';
-    } catch (error) {
-        console.error('Erro auth:', error);
-        let msg = 'Erro ao autenticar.';
-        if (error.code === 'auth/user-not-found') msg = 'Usuário não encontrado.';
-        if (error.code === 'auth/wrong-password') msg = 'Senha incorreta.';
-        if (error.code === 'auth/email-already-in-use') msg = 'Este e-mail já está cadastrado.';
-        if (error.code === 'auth/weak-password') msg = 'A senha deve ter pelo menos 6 caracteres.';
-        if (error.code === 'auth/invalid-email') msg = 'E-mail inválido.';
-        if (errorDiv) {
-            errorDiv.textContent = msg;
-            errorDiv.style.display = 'block';
-        }
+        $('#loginEmail').value = ''; $('#loginSenha').value = ''; $('#loginNome').value = '';
+    } catch (err) {
+        let msg = 'Erro.';
+        if (err.code === 'auth/email-already-in-use') msg = 'E-mail já cadastrado.';
+        else if (err.code === 'auth/weak-password') msg = 'Senha fraca (mínimo 6).';
+        errorDiv.textContent = msg;
+        errorDiv.style.display = 'block';
     }
 }
 
 async function logout() {
-    try {
-        await auth.signOut();
-        showToast('Você saiu da conta.', 'success');
-        carregarCarros();
-    } catch (error) {
-        showToast('Erro ao sair.', 'error');
-    }
+    await auth.signOut();
+    showToast('Saiu da conta.', 'success');
+    carregarFichas();
 }
 
-// ==================== CRUD CARROS ====================
-function abrirModalCarro(carro) {
+// ========== CRUD FICHAS ==========
+function abrirModalFicha(ficha) {
     $('#formError').style.display = 'none';
-    $('#formCarro').reset();
-    $('#carroId').value = '';
+    $('#formFicha').reset();
+    $('#fichaId').value = '';
 
-    if (carro) {
-        $('#modalCarroTitle').textContent = 'Editar Anúncio';
-        $('#carroId').value = carro.id;
-        $('#carroMarca').value = carro.marca || '';
-        $('#carroModelo').value = carro.modelo || '';
-        $('#carroAno').value = carro.ano || '';
-        $('#carroPreco').value = carro.preco || '';
-        $('#carroKm').value = carro.quilometragem || '';
-        $('#carroCombustivel').value = carro.combustivel || '';
-        $('#carroCambio').value = carro.cambio || '';
-        $('#carroCor').value = carro.cor || '';
-        $('#carroImagem').value = carro.imagem || '';
-        $('#carroDescricao').value = carro.descricao || '';
-        $('#carroDestaque').checked = carro.destaque || false;
-        $('#carroVendido').checked = carro.vendido || false;
+    if (ficha) {
+        $('#modalFichaTitle').textContent = 'Editar Ficha';
+        $('#fichaId').value = ficha.id;
+        $('#fichaNome').value = ficha.nome || '';
+        $('#fichaRaca').value = ficha.raca || '';
+        $('#fichaClasse').value = ficha.classe || '';
+        $('#fichaNivel').value = ficha.nivel || 1;
+        $('#fichaForca').value = ficha.forca || 10;
+        $('#fichaDestreza').value = ficha.destreza || 10;
+        $('#fichaConstituicao').value = ficha.constituicao || 10;
+        $('#fichaInteligencia').value = ficha.inteligencia || 10;
+        $('#fichaSabedoria').value = ficha.sabedoria || 10;
+        $('#fichaCarisma').value = ficha.carisma || 10;
+        $('#fichaHP').value = ficha.hp || 10;
+        $('#fichaImagem').value = ficha.imagem || '';
+        $('#fichaEquipamentos').value = ficha.equipamentos || '';
+        $('#fichaDescricao').value = ficha.descricao || '';
     } else {
-        $('#modalCarroTitle').textContent = 'Anunciar Carro';
-        $('#carroDestaque').checked = false;
-        $('#carroVendido').checked = false;
+        $('#modalFichaTitle').textContent = 'Nova Ficha';
     }
-    abrirModal('modalCarro');
+    abrirModal('modalFicha');
 }
 
-async function handleSalvarCarro(e) {
+async function salvarFicha(e) {
     e.preventDefault();
     const errorDiv = $('#formError');
     errorDiv.style.display = 'none';
 
     if (!currentUser) {
-        showToast('Você precisa estar logado!', 'warning');
-        abrirModal('modalLogin');
+        showToast('Logue para salvar!', 'warning');
         return;
     }
 
-    const id = $('#carroId').value;
-    const carroData = {
-        marca: $('#carroMarca').value.trim(),
-        modelo: $('#carroModelo').value.trim(),
-        ano: parseInt($('#carroAno').value) || 0,
-        preco: parseFloat($('#carroPreco').value) || 0,
-        quilometragem: parseInt($('#carroKm').value) || 0,
-        combustivel: $('#carroCombustivel').value,
-        cambio: $('#carroCambio').value,
-        cor: $('#carroCor').value,
-        imagem: $('#carroImagem').value.trim(),
-        descricao: $('#carroDescricao').value.trim(),
-        destaque: $('#carroDestaque').checked,
-        vendido: $('#carroVendido').checked,
+    const id = $('#fichaId').value;
+    const dados = {
+        nome: $('#fichaNome').value.trim(),
+        raca: $('#fichaRaca').value,
+        classe: $('#fichaClasse').value,
+        nivel: parseInt($('#fichaNivel').value) || 1,
+        forca: parseInt($('#fichaForca').value) || 10,
+        destreza: parseInt($('#fichaDestreza').value) || 10,
+        constituicao: parseInt($('#fichaConstituicao').value) || 10,
+        inteligencia: parseInt($('#fichaInteligencia').value) || 10,
+        sabedoria: parseInt($('#fichaSabedoria').value) || 10,
+        carisma: parseInt($('#fichaCarisma').value) || 10,
+        hp: parseInt($('#fichaHP').value) || 10,
+        imagem: $('#fichaImagem').value.trim(),
+        equipamentos: $('#fichaEquipamentos').value.trim(),
+        descricao: $('#fichaDescricao').value.trim(),
         userId: currentUser.uid,
     };
 
-    // Validação
-    if (!carroData.marca || !carroData.modelo || !carroData.ano || !carroData.preco ||
-        !carroData.quilometragem || !carroData.combustivel || !carroData.cambio) {
-        errorDiv.textContent = 'Preencha todos os campos obrigatórios (*).';
-        errorDiv.style.display = 'block';
-        return;
-    }
-
-    if (carroData.ano < 1990 || carroData.ano > 2026) {
-        errorDiv.textContent = 'Ano inválido. Informe um ano entre 1990 e 2026.';
-        errorDiv.style.display = 'block';
-        return;
-    }
-
-    if (carroData.preco <= 0) {
-        errorDiv.textContent = 'Informe um preço válido.';
+    if (!dados.nome || !dados.raca || !dados.classe) {
+        errorDiv.textContent = 'Nome, raça e classe são obrigatórios.';
         errorDiv.style.display = 'block';
         return;
     }
 
     try {
         if (id) {
-            // Atualizar
-            await db.collection('carros').doc(id).update({
-                ...carroData,
-                dataAtualizacao: firebase.firestore.FieldValue.serverTimestamp(),
+            await db.collection('fichas').doc(id).update({
+                ...dados,
+                atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
             });
-            showToast('Anúncio atualizado com sucesso!', 'success');
+            showToast('Ficha atualizada!', 'success');
         } else {
-            // Criar
-            await db.collection('carros').add({
-                ...carroData,
-                dataCadastro: firebase.firestore.FieldValue.serverTimestamp(),
+            await db.collection('fichas').add({
+                ...dados,
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
             });
-            showToast('Carro anunciado com sucesso!', 'success');
+            showToast('Ficha criada!', 'success');
         }
-        fecharModal('modalCarro');
-        carrosCache = [];
-        ultimoDocumento = null;
-        todosCarregados = false;
-        carregarCarros();
-    } catch (error) {
-        console.error('Erro ao salvar:', error);
-        errorDiv.textContent = 'Erro ao salvar. Verifique sua conexão e tente novamente.';
+        fecharModal('modalFicha');
+        resetarCache();
+        carregarFichas();
+    } catch (err) {
+        errorDiv.textContent = 'Erro ao salvar. Tente novamente.';
         errorDiv.style.display = 'block';
     }
 }
 
-function abrirConfirmacaoExclusao(carro) {
-    carroParaExcluir = carro;
-    $('#confirmText').textContent =
-        `"${carro.marca} ${carro.modelo} - ${carro.ano}" será excluído permanentemente.`;
+function abrirConfirmacao(ficha) {
+    fichaParaExcluir = ficha;
+    $('#confirmText').textContent = `Deseja mesmo excluir "${ficha.nome}"?`;
     abrirModal('modalConfirmacao');
 }
 
 async function confirmarExclusao() {
-    if (!carroParaExcluir) return;
-    try {
-        await db.collection('carros').doc(carroParaExcluir.id).delete();
-        showToast('Anúncio excluído!', 'success');
-        fecharModal('modalConfirmacao');
-        carroParaExcluir = null;
-        carrosCache = carrosCache.filter((c) => c.id !== carroParaExcluir?.id);
-        renderizarCarros(carrosCache);
-    } catch (error) {
-        console.error('Erro ao excluir:', error);
-        showToast('Erro ao excluir anúncio.', 'error');
-    }
+    if (!fichaParaExcluir) return;
+    await db.collection('fichas').doc(fichaParaExcluir.id).delete();
+    showToast('Ficha excluída!', 'success');
+    fecharModal('modalConfirmacao');
+    fichasCache = fichasCache.filter(f => f.id !== fichaParaExcluir.id);
+    fichaParaExcluir = null;
+    renderizarFichas(fichasCache);
 }
 
-// ==================== CARREGAR E RENDERIZAR ====================
-async function carregarCarros(apenasDestaques = false) {
+// ========== CARREGAR / RENDERIZAR ==========
+async function carregarFichas() {
     mostrarLoading(true);
     $('#emptyState').style.display = 'none';
-    $('#loadMoreContainer').style.display = 'none';
-    carrosCache = [];
-    ultimoDocumento = null;
+    fichasCache = [];
+    ultimoDoc = null;
     todosCarregados = false;
 
-    try {
-        let query = db.collection('carros').orderBy('destaque', 'desc').orderBy('dataCadastro', 'desc');
-
-        if (apenasDestaques) {
-            query = query.where('destaque', '==', true);
-        }
-
-        query = query.limit(CARROS_POR_PAGINA);
-
-        const snapshot = await query.get();
-
-        if (snapshot.empty) {
-            mostrarLoading(false);
-            $('#emptyState').style.display = 'block';
-            $('#carGrid').innerHTML = '';
-            return;
-        }
-
-        carrosCache = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
-        ultimoDocumento = snapshot.docs[snapshot.docs.length - 1];
-        todosCarregados = snapshot.docs.length < CARROS_POR_PAGINA;
-
-        aplicarFiltrosLocais();
+    if (!currentUser) {
         mostrarLoading(false);
-        atualizarBotaoCarregarMais();
-    } catch (error) {
-        console.error('Erro ao carregar:', error);
-        mostrarLoading(false);
-        showToast('Erro ao carregar carros. Verifique a conexão.', 'error');
-    }
-}
-
-async function carregarMaisCarros() {
-    if (carregandoMais || todosCarregados || !ultimoDocumento) return;
-    carregandoMais = true;
-    $('#btnLoadMore').disabled = true;
-    $('#btnLoadMore').innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:3px;"></span> Carregando...';
-
-    try {
-        let query = db.collection('carros')
-            .orderBy('destaque', 'desc')
-            .orderBy('dataCadastro', 'desc')
-            .startAfter(ultimoDocumento)
-            .limit(CARROS_POR_PAGINA);
-
-        const snapshot = await query.get();
-
-        if (snapshot.empty) {
-            todosCarregados = true;
-        } else {
-            const novos = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            carrosCache = [...carrosCache, ...novos];
-            ultimoDocumento = snapshot.docs[snapshot.docs.length - 1];
-            todosCarregados = snapshot.docs.length < CARROS_POR_PAGINA;
-        }
-
-        aplicarFiltrosLocais();
-        atualizarBotaoCarregarMais();
-    } catch (error) {
-        console.error('Erro ao carregar mais:', error);
-    } finally {
-        carregandoMais = false;
-        $('#btnLoadMore').disabled = false;
-        $('#btnLoadMore').innerHTML = '<i class="fas fa-chevron-down"></i> Carregar mais';
-    }
-}
-
-function atualizarBotaoCarregarMais() {
-    if (todosCarregados) {
-        $('#loadMoreContainer').style.display = 'none';
-    } else {
-        $('#loadMoreContainer').style.display = 'block';
-    }
-}
-
-function aplicarFiltrosLocais() {
-    const termo = ($('#searchInput')?.value || '').toLowerCase().trim();
-    const marcaFiltro = ($('#filterMarca')?.value || '').toLowerCase();
-    const combustivelFiltro = $('#filterCombustivel')?.value || '';
-    const cambioFiltro = $('#filterCambio')?.value || '';
-    const anoMin = parseInt($('#filterAnoMin')?.value) || 0;
-    const precoMax = parseFloat($('#filterPrecoMax')?.value) || 0;
-
-    let filtrados = [...carrosCache];
-
-    if (termo) {
-        filtrados = filtrados.filter(
-            (c) =>
-            c.marca?.toLowerCase().includes(termo) ||
-            c.modelo?.toLowerCase().includes(termo) ||
-            c.descricao?.toLowerCase().includes(termo)
-        );
-    }
-
-    if (marcaFiltro) {
-        filtrados = filtrados.filter((c) => c.marca?.toLowerCase() === marcaFiltro);
-    }
-
-    if (combustivelFiltro) {
-        filtrados = filtrados.filter((c) => c.combustivel === combustivelFiltro);
-    }
-
-    if (cambioFiltro) {
-        filtrados = filtrados.filter((c) => c.cambio === cambioFiltro);
-    }
-
-    if (anoMin > 0) {
-        filtrados = filtrados.filter((c) => c.ano >= anoMin);
-    }
-
-    if (precoMax > 0) {
-        filtrados = filtrados.filter((c) => c.preco <= precoMax);
-    }
-
-    renderizarCarros(filtrados);
-}
-
-function aplicarFiltros() {
-    aplicarFiltrosLocais();
-}
-
-function limparFiltros() {
-    if ($('#searchInput')) $('#searchInput').value = '';
-    if ($('#filterMarca')) $('#filterMarca').value = '';
-    if ($('#filterCombustivel')) $('#filterCombustivel').value = '';
-    if ($('#filterCambio')) $('#filterCambio').value = '';
-    if ($('#filterAnoMin')) $('#filterAnoMin').value = '';
-    if ($('#filterPrecoMax')) $('#filterPrecoMax').value = '';
-    aplicarFiltrosLocais();
-    carregarCarros(false);
-}
-
-function renderizarCarros(carros) {
-    const grid = $('#carGrid');
-    const emptyState = $('#emptyState');
-
-    if (!carros || carros.length === 0) {
-        grid.innerHTML = '';
-        if (emptyState) emptyState.style.display = 'block';
+        $('#emptyState').style.display = 'block';
+        $('#fichaGrid').innerHTML = '';
         return;
     }
 
-    if (emptyState) emptyState.style.display = 'none';
-
-    grid.innerHTML = carros
-        .map((carro) => {
-            const badges = [];
-            if (carro.destaque) badges.push('<span class="badge badge-destaque">⭐ Destaque</span>');
-            if (carro.vendido) badges.push('<span class="badge badge-vendido">Vendido</span>');
-            if (carro.combustivel)
-                badges.push(`<span class="badge badge-combustivel">⛽ ${carro.combustivel}</span>`);
-
-            const imgContent = carro.imagem ?
-                `<img src="${escapeHtml(carro.imagem)}" alt="${escapeHtml(carro.modelo)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'><i class=\\'fas fa-car-side\\'></i></div>'">` :
-                `<div class="no-image"><i class="fas fa-car-side"></i></div>`;
-
-            const acoes = currentUser ?
-                `
-                <button class="btn btn-outline btn-detalhes" data-id="${carro.id}">
-                    <i class="fas fa-eye"></i> Ver
-                </button>
-                <button class="btn btn-outline btn-editar" data-id="${carro.id}">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="btn btn-danger btn-excluir" data-id="${carro.id}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            ` :
-                `
-                <button class="btn btn-outline btn-detalhes btn-block" data-id="${carro.id}">
-                    <i class="fas fa-eye"></i> Ver detalhes
-                </button>
-            `;
-
-            return `
-                <article class="car-card" data-id="${carro.id}">
-                    <div class="car-card-img">
-                        ${imgContent}
-                    </div>
-                    ${badges.length ? `<div class="car-card-badge">${badges.join('')}</div>` : ''}
-                    <div class="car-card-body">
-                        <h3 class="car-card-title">${escapeHtml(carro.marca)} ${escapeHtml(carro.modelo)}</h3>
-                        <p class="car-card-subtitle">Ano ${carro.ano} • ${carro.cor || 'Cor não informada'}</p>
-                        <p class="car-card-price">${formatarMoeda(carro.preco)}</p>
-                        <div class="car-card-details">
-                            <span><i class="fas fa-tachometer-alt"></i> ${formatarKm(carro.quilometragem)}</span>
-                            <span><i class="fas fa-cog"></i> ${carro.cambio || 'N/I'}</span>
-                        </div>
-                        <div class="car-card-actions">
-                            ${acoes}
-                        </div>
-                    </div>
-                </article>
-            `;
-        })
-        .join('');
-
-    // Event listeners nos botões dos cards
-    grid.querySelectorAll('.btn-detalhes').forEach((btn) => {
-        btn.addEventListener('click', () => abrirDetalhes(btn.dataset.id));
-    });
-    grid.querySelectorAll('.btn-editar').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const carro = carrosCache.find((c) => c.id === btn.dataset.id);
-            if (carro) abrirModalCarro(carro);
-        });
-    });
-    grid.querySelectorAll('.btn-excluir').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const carro = carrosCache.find((c) => c.id === btn.dataset.id);
-            if (carro) abrirConfirmacaoExclusao(carro);
-        });
-    });
-
-    // Atualiza visibilidade das ações
-    renderizarAcoesCards();
-}
-
-function abrirDetalhes(id) {
-    const carro = carrosCache.find((c) => c.id === id);
-    if (!carro) return;
-
-    const content = $('#detalhesContent');
-    const imgContent = carro.imagem ?
-        `<img src="${escapeHtml(carro.imagem)}" alt="${escapeHtml(carro.modelo)}" class="detalhes-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
-        `<div class="detalhes-img no-image-placeholder" style="display:none;"><i class="fas fa-car-side"></i></div>` :
-        `<div class="detalhes-img no-image-placeholder"><i class="fas fa-car-side"></i></div>`;
-
-    content.innerHTML = `
-        <div class="detalhes-carro">
-            ${imgContent}
-            <h2>${escapeHtml(carro.marca)} ${escapeHtml(carro.modelo)}</h2>
-            <p class="detalhes-preco">${formatarMoeda(carro.preco)}</p>
-            ${carro.vendido ? '<span class="badge badge-vendido" style="display:inline-block;margin-bottom:0.8rem;">Vendido</span>' : ''}
-            ${carro.destaque ? '<span class="badge badge-destaque" style="display:inline-block;margin-bottom:0.8rem;margin-left:0.3rem;">Destaque</span>' : ''}
-            <div class="detalhes-info">
-                <div class="info-item"><strong>Ano</strong> ${carro.ano}</div>
-                <div class="info-item"><strong>Quilometragem</strong> ${formatarKm(carro.quilometragem)}</div>
-                <div class="info-item"><strong>Combustível</strong> ${carro.combustivel || 'N/I'}</div>
-                <div class="info-item"><strong>Câmbio</strong> ${carro.cambio || 'N/I'}</div>
-                <div class="info-item"><strong>Cor</strong> ${carro.cor || 'N/I'}</div>
-                <div class="info-item"><strong>Anunciante</strong> ${carro.userId === currentUser?.uid ? 'Você' : 'Outro vendedor'}</div>
-            </div>
-            ${carro.descricao ? `<p class="detalhes-descricao">${escapeHtml(carro.descricao)}</p>` : '<p style="color:#999;">Sem descrição.</p>'}
-        </div>
-    `;
-    abrirModal('modalDetalhes');
-}
-
-// ==================== MARCAS PARA FILTRO ====================
-async function carregarMarcasParaFiltro() {
     try {
-        const snapshot = await db.collection('carros').get();
-        const marcas = new Set();
-        snapshot.docs.forEach((doc) => {
-            const m = doc.data().marca;
-            if (m) marcas.add(m);
-        });
-        const select = $('#filterMarca');
-        if (select) {
-            const sorted = [...marcas].sort();
-            sorted.forEach((marca) => {
-                const option = document.createElement('option');
-                option.value = marca;
-                option.textContent = marca;
-                select.appendChild(option);
-            });
+        const q = db.collection('fichas')
+            .where('userId', '==', currentUser.uid)
+            .orderBy('criadoEm', 'desc')
+            .limit(FICHAS_POR_PAGINA);
+        const snap = await q.get();
+
+        if (snap.empty) {
+            $('#emptyState').style.display = 'block';
+        } else {
+            fichasCache = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            ultimoDoc = snap.docs[snap.docs.length - 1];
+            todosCarregados = snap.docs.length < FICHAS_POR_PAGINA;
         }
-    } catch (error) {
-        console.warn('Não foi possível carregar marcas para o filtro:', error.message);
+        aplicarFiltrosLocais();
+    } catch (err) {
+        console.error(err);
+    } finally {
+        mostrarLoading(false);
+        atualizarBotaoMais();
     }
 }
 
-// ==================== UTILITÁRIOS ====================
-function formatarMoeda(valor) {
-    if (valor == null || isNaN(valor)) return 'R$ 0,00';
-    return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+async function carregarMais() {
+    if (carregandoMais || todosCarregados || !ultimoDoc) return;
+    carregandoMais = true;
+    const btn = $('#btnLoadMore');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div>';
+
+    const q = db.collection('fichas')
+        .where('userId', '==', currentUser.uid)
+        .orderBy('criadoEm', 'desc')
+        .startAfter(ultimoDoc)
+        .limit(FICHAS_POR_PAGINA);
+    const snap = await q.get();
+    if (snap.empty) {
+        todosCarregados = true;
+    } else {
+        const novos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        fichasCache = [...fichasCache, ...novos];
+        ultimoDoc = snap.docs[snap.docs.length - 1];
+        todosCarregados = snap.docs.length < FICHAS_POR_PAGINA;
+    }
+    aplicarFiltrosLocais();
+    carregandoMais = false;
+    btn.innerHTML = '<i class="fas fa-chevron-down"></i> Carregar mais';
+    btn.disabled = false;
+    atualizarBotaoMais();
 }
 
-function formatarKm(km) {
-    if (km == null || isNaN(km)) return '0 km';
-    return km.toLocaleString('pt-BR') + ' km';
+function atualizarBotaoMais() {
+    $('#loadMoreContainer').style.display = todosCarregados ? 'none' : 'block';
 }
 
+function aplicarFiltrosLocais() {
+    const termo = ($('#searchInput')?.value || '').toLowerCase();
+    const classeFiltro = $('#filterClasse')?.value || '';
+    const racaFiltro = $('#filterRaca')?.value || '';
+
+    let filtradas = [...fichasCache];
+    if (termo) {
+        filtradas = filtradas.filter(f =>
+            f.nome?.toLowerCase().includes(termo) ||
+            f.classe?.toLowerCase().includes(termo) ||
+            f.raca?.toLowerCase().includes(termo)
+        );
+    }
+    if (classeFiltro) filtradas = filtradas.filter(f => f.classe === classeFiltro);
+    if (racaFiltro) filtradas = filtradas.filter(f => f.raca === racaFiltro);
+
+    renderizarFichas(filtradas);
+}
+
+function aplicarFiltros() { aplicarFiltrosLocais(); }
+function limparFiltros() {
+    $('#searchInput').value = '';
+    $('#filterClasse').value = '';
+    $('#filterRaca').value = '';
+    aplicarFiltrosLocais();
+    carregarFichas();
+}
+
+function resetarCache() {
+    fichasCache = [];
+    ultimoDoc = null;
+    todosCarregados = false;
+}
+
+function renderizarFichas(fichas) {
+    const grid = $('#fichaGrid');
+    const empty = $('#emptyState');
+    if (!fichas.length) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    grid.innerHTML = fichas.map(f => {
+        const img = f.imagem
+            ? `<img src="${escapeHtml(f.imagem)}" alt="${escapeHtml(f.nome)}" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'><i class=\\'fas fa-user-shield\\'></i></div>'">`
+            : `<div class="no-image"><i class="fas fa-user-shield"></i></div>`;
+        const acoes = currentUser ? `
+            <button class="btn btn-outline btn-detalhes" data-id="${f.id}"><i class="fas fa-eye"></i></button>
+            <button class="btn btn-outline btn-editar" data-id="${f.id}"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-excluir" data-id="${f.id}"><i class="fas fa-trash"></i></button>
+        ` : '';
+        return `
+        <div class="ficha-card" data-id="${f.id}">
+            <div class="ficha-card-img">${img}</div>
+            <div class="ficha-card-body">
+                <h3 class="ficha-card-title">${escapeHtml(f.nome)}</h3>
+                <p class="ficha-card-subtitle">${f.raca} • ${f.classe} • Nível ${f.nivel}</p>
+                <div class="ficha-card-stats">
+                    <span><i class="fas fa-heart"></i> HP ${f.hp}</span>
+                    <span><i class="fas fa-fist-raised"></i> FOR ${f.forca}</span>
+                    <span><i class="fas fa-feather"></i> DES ${f.destreza}</span>
+                </div>
+                <div class="ficha-card-actions">${acoes}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Eventos dos botões
+    grid.querySelectorAll('.btn-detalhes').forEach(btn => {
+        btn.addEventListener('click', () => abrirDetalhes(btn.dataset.id));
+    });
+    grid.querySelectorAll('.btn-editar').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const ficha = fichasCache.find(f => f.id === btn.dataset.id);
+            if (ficha) abrirModalFicha(ficha);
+        });
+    });
+    grid.querySelectorAll('.btn-excluir').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const ficha = fichasCache.find(f => f.id === btn.dataset.id);
+            if (ficha) abrirConfirmacao(ficha);
+        });
+    });
+}
+
+function abrirDetalhes(id) {
+    const ficha = fichasCache.find(f => f.id === id);
+    if (!ficha) return;
+
+    const content = $('#detalhesContent');
+    const img = ficha.imagem
+        ? `<img src="${escapeHtml(ficha.imagem)}" alt="${escapeHtml(ficha.nome)}" class="detalhes-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="detalhes-img no-image-placeholder" style="display:none;"><i class="fas fa-user-shield"></i></div>`
+        : `<div class="detalhes-img no-image-placeholder"><i class="fas fa-user-shield"></i></div>`;
+
+    content.innerHTML = `
+    <div class="detalhes-ficha">
+        ${img}
+        <h2 style="font-family:var(--font-medieval); color:var(--primary);">${escapeHtml(ficha.nome)}</h2>
+        <p style="color:var(--gray-600);">${ficha.raca} • ${ficha.classe} • Nível ${ficha.nivel}</p>
+        <div class="detalhes-atributos" style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin:1rem 0;">
+            <div>Força: ${ficha.forca}</div><div>Destreza: ${ficha.destreza}</div>
+            <div>Constituição: ${ficha.constituicao}</div><div>Inteligência: ${ficha.inteligencia}</div>
+            <div>Sabedoria: ${ficha.sabedoria}</div><div>Carisma: ${ficha.carisma}</div>
+        </div>
+        <p><strong>HP:</strong> ${ficha.hp}</p>
+        <p><strong>Equipamentos:</strong> ${ficha.equipamentos || 'Nenhum'}</p>
+        <p><strong>Descrição:</strong> ${ficha.descricao || 'Nenhuma'}</p>
+    </div>`;
+    abrirModal('modalDetalhes');
+}
+
+// Utilitários
 function escapeHtml(str) {
-    if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
 }
-
-function mostrarLoading(mostrar) {
-    const loading = $('#loading');
-    if (loading) loading.style.display = mostrar ? 'block' : 'none';
+function mostrarLoading(v) { $('#loading').style.display = v ? 'block' : 'none'; }
+function showToast(msg, tipo) {
+    const c = $('#toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
 }
-
-function showToast(mensagem, tipo = 'success') {
-    const container = $('#toastContainer');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast ${tipo}`;
-    const icones = { success: '✅', error: '❌', warning: '⚠️' };
-    toast.innerHTML = `${icones[tipo] || 'ℹ️'} ${mensagem}`;
-    container.appendChild(toast);
-    setTimeout(() => {
-        if (toast.parentNode) toast.remove();
-    }, 4000);
-}
-
-// ==================== REGRAS SUGERIDAS PARA O FIRESTORE ====================
-/*
-    Acesse o Console Firebase > Firestore Database > Regras
-    e cole as regras abaixo para segurança básica:
-
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
-        match /carros/{documentId} {
-          allow read: if true;
-          allow create: if request.auth != null
-                        && request.resource.data.userId == request.auth.uid;
-          allow update: if request.auth != null
-                        && resource.data.userId == request.auth.uid;
-          allow delete: if request.auth != null
-                        && resource.data.userId == request.auth.uid;
-        }
-      }
-    }
-*/
